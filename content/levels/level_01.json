@@ -1,0 +1,40 @@
+{
+  "id": "level_01",
+  "index": 1,
+  "title": "Rotation Basics",
+  "briefMarkdown": "Route traffic to a single pool with two equal-weight backends. Watch strict rotation while backends stay healthy.",
+  "pools": [
+    {
+      "id": "web",
+      "name": "Web Pool",
+      "stickyEnabled": false,
+      "backends": [
+        { "id": "web-a", "name": "web-a", "weight": 50 },
+        { "id": "web-b", "name": "web-b", "weight": 50 }
+      ]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "web" },
+      "starterRules": []
+    }
+  },
+  "autoRecovery": true,
+  "recoveryTicks": 12,
+  "displayHeaders": [],
+  "passThreshold": { "successRate": 0.9, "durationTicks": 45 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "shop.example",
+        "path": "/",
+        "method": "GET",
+        "listenerPort": 80
+      }
+    }
+  ],
+  "healthEvents": []
+}

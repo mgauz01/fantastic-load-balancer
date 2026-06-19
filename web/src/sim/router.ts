@@ -2,14 +2,13 @@ import { findMatchingPlayerRule } from "./match";
 import { selectBackendFromPool } from "./sticky";
 import type {
   IncomingRequest,
-  ListenerRules,
   RequestLogEntry,
   RouteContext,
   RouteResult,
 } from "./types";
 
 export function routeRequest(request: IncomingRequest, context: RouteContext): RouteResult {
-  const { listenerRules, pools } = context;
+  const { listenerRules } = context;
   const tlsTerminated = request.listenerPort === 443;
   const matchedPlayerRule = findMatchingPlayerRule(listenerRules.playerRules, request);
 

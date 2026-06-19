@@ -1,0 +1,41 @@
+{
+  "id": "level_05",
+  "index": 5,
+  "title": "Sticky Sessions",
+  "briefMarkdown": "The cart pool enables sticky sessions on the session cookie. Keep each client on the same backend while it stays healthy.",
+  "pools": [
+    {
+      "id": "cart",
+      "name": "Cart Pool",
+      "stickyEnabled": true,
+      "backends": [
+        { "id": "cart-a", "name": "cart-a", "weight": 50 },
+        { "id": "cart-b", "name": "cart-b", "weight": 50 }
+      ]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "cart" },
+      "starterRules": []
+    }
+  },
+  "autoRecovery": true,
+  "recoveryTicks": 15,
+  "displayHeaders": ["session"],
+  "passThreshold": { "successRate": 0.95, "durationTicks": 60 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "cart.example",
+        "path": "/items",
+        "method": "GET",
+        "listenerPort": 80,
+        "sessionCookie": "sess-8471"
+      }
+    }
+  ],
+  "healthEvents": []
+}

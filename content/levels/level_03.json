@@ -1,0 +1,43 @@
+{
+  "id": "level_03",
+  "index": 3,
+  "title": "Host and Path Rules",
+  "briefMarkdown": "The default rule denies all traffic on :80. Add host and path rules to reach the API and static pools.",
+  "pools": [
+    {
+      "id": "static",
+      "name": "Static Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "static-1", "name": "static-1", "weight": 100 }]
+    },
+    {
+      "id": "api",
+      "name": "API Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "api-1", "name": "api-1", "weight": 100 }]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "deny" },
+      "starterRules": []
+    }
+  },
+  "autoRecovery": true,
+  "recoveryTicks": 12,
+  "displayHeaders": [],
+  "passThreshold": { "successRate": 0.95, "durationTicks": 60 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "app.example",
+        "path": "/api/users",
+        "method": "GET",
+        "listenerPort": 80
+      }
+    }
+  ],
+  "healthEvents": []
+}

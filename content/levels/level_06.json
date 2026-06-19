@@ -1,0 +1,53 @@
+{
+  "id": "level_06",
+  "index": 6,
+  "title": "Header Routing",
+  "briefMarkdown": "Route EU clients with an exact header match before broader path rules take over.",
+  "pools": [
+    {
+      "id": "eu",
+      "name": "EU Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "eu-1", "name": "eu-1", "weight": 100 }]
+    },
+    {
+      "id": "us",
+      "name": "US Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "us-1", "name": "us-1", "weight": 100 }]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "us" },
+      "starterRules": [
+        {
+          "id": "eu-header",
+          "priority": 1,
+          "matchType": "header",
+          "headerName": "X-Region",
+          "matchValue": "eu",
+          "targetPoolId": "eu"
+        }
+      ]
+    }
+  },
+  "autoRecovery": true,
+  "recoveryTicks": 12,
+  "displayHeaders": ["X-Region"],
+  "passThreshold": { "successRate": 0.95, "durationTicks": 60 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "global.example",
+        "path": "/api",
+        "method": "GET",
+        "listenerPort": 80,
+        "headers": { "X-Region": "eu" }
+      }
+    }
+  ],
+  "healthEvents": []
+}

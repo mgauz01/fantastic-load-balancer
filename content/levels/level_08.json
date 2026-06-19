@@ -1,0 +1,83 @@
+{
+  "id": "level_08",
+  "index": 8,
+  "title": "Capstone Audit",
+  "briefMarkdown": "Fix a partially configured rule table: wrong host pool, narrow path prefix, missing EU header rule, missing :443 mirrors, and priority inversion.",
+  "pools": [
+    {
+      "id": "web",
+      "name": "Web Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "web-1", "name": "web-1", "weight": 100 }]
+    },
+    {
+      "id": "api",
+      "name": "API Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "api-1", "name": "api-1", "weight": 100 }]
+    },
+    {
+      "id": "eu",
+      "name": "EU Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "eu-1", "name": "eu-1", "weight": 100 }]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "deny" },
+      "starterRules": [
+        {
+          "id": "broad-path",
+          "priority": 1,
+          "matchType": "path_prefix",
+          "matchValue": "/",
+          "targetPoolId": "web"
+        },
+        {
+          "id": "wrong-host",
+          "priority": 2,
+          "matchType": "host",
+          "matchValue": "admin.example",
+          "targetPoolId": "web"
+        },
+        {
+          "id": "narrow-api",
+          "priority": 3,
+          "matchType": "path_prefix",
+          "matchValue": "/api/v",
+          "targetPoolId": "api"
+        }
+      ]
+    },
+    "443": {
+      "defaultRule": { "priority": 100, "action": "deny" },
+      "starterRules": []
+    }
+  },
+  "autoRecovery": true,
+  "recoveryTicks": 12,
+  "displayHeaders": ["X-Region"],
+  "passThreshold": { "successRate": 0.95, "durationTicks": 60 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "admin.example",
+        "path": "/api/v2/users",
+        "method": "GET",
+        "listenerPort": 80,
+        "headers": { "X-Region": "eu" }
+      }
+    }
+  ],
+  "healthEvents": [],
+  "capstoneMistakes": [
+    "wrong_host_pool",
+    "narrow_path_prefix",
+    "missing_eu_header",
+    "missing_tls_mirror",
+    "priority_inversion"
+  ]
+}

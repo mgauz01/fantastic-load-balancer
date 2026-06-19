@@ -1,0 +1,41 @@
+{
+  "id": "level_07",
+  "index": 7,
+  "title": "TLS Termination",
+  "briefMarkdown": "Mirror your :80 rules on the :443 listener. TLS is abstracted; logs should show terminated handling.",
+  "pools": [
+    {
+      "id": "secure",
+      "name": "Secure Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "secure-1", "name": "secure-1", "weight": 100 }]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "secure" },
+      "starterRules": []
+    },
+    "443": {
+      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "secure" },
+      "starterRules": []
+    }
+  },
+  "autoRecovery": true,
+  "recoveryTicks": 12,
+  "displayHeaders": [],
+  "passThreshold": { "successRate": 0.95, "durationTicks": 60 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "secure.example",
+        "path": "/",
+        "method": "GET",
+        "listenerPort": 443
+      }
+    }
+  ],
+  "healthEvents": []
+}

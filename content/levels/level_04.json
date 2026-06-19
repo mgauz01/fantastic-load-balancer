@@ -1,0 +1,46 @@
+{
+  "id": "level_04",
+  "index": 4,
+  "title": "Failover Without Auto-Recovery",
+  "briefMarkdown": "A backend fails mid-level and will not recover automatically. Route around the outage with pause-and-edit.",
+  "pools": [
+    {
+      "id": "primary",
+      "name": "Primary Pool",
+      "stickyEnabled": false,
+      "backends": [
+        { "id": "primary-a", "name": "primary-a", "weight": 50 },
+        { "id": "primary-b", "name": "primary-b", "weight": 50 }
+      ]
+    },
+    {
+      "id": "standby",
+      "name": "Standby Pool",
+      "stickyEnabled": false,
+      "backends": [{ "id": "standby-1", "name": "standby-1", "weight": 100 }]
+    }
+  ],
+  "listeners": {
+    "80": {
+      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "primary" },
+      "starterRules": []
+    }
+  },
+  "autoRecovery": false,
+  "recoveryTicks": 0,
+  "displayHeaders": [],
+  "passThreshold": { "successRate": 0.95, "durationTicks": 60 },
+  "trafficSpawns": [
+    {
+      "everyTicks": 1,
+      "count": 1,
+      "template": {
+        "host": "checkout.example",
+        "path": "/pay",
+        "method": "POST",
+        "listenerPort": 80
+      }
+    }
+  ],
+  "healthEvents": [{ "tick": 18, "backendId": "primary-a", "health": "unhealthy" }]
+}
