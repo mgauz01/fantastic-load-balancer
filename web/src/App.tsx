@@ -1,40 +1,87 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { getCampaignLevel } from "./game/campaign";
+import { useProgress } from "./hooks/useProgress";
 import HelpOverlay from "./ui/intro/HelpOverlay";
 import IntroTrafficBackdrop from "./ui/intro/IntroTrafficBackdrop";
-import MainMenuScreen from "./ui/intro/MainMenuScreen";
-import MenuSubScreen from "./ui/intro/MenuSubScreen";
+import MainMenuScreen, { type MenuItem } from "./ui/intro/MainMenuScreen";
 import { viewFromMenuId, type AppView } from "./ui/intro/navigation";
+import CampaignBriefModal from "./ui/screens/CampaignBriefModal";
+import CampaignMapScreen from "./ui/screens/CampaignMapScreen";
+import LeaderboardScreen from "./ui/screens/LeaderboardScreen";
+import PlayScreen from "./ui/screens/PlayScreen";
 
 export default function App() {
   const [view, setView] = useState<AppView>("menu");
+  const [selectedLevelId, setSelectedLevelId] = useState<string | null>(null);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const { progress, loading, completeLevel, arcadeUnlocked } = useProgress();
+
+  const menuItems = useMemo<MenuItem[]>(
+    () => [
+      { id: "campaign", label: "CAMPAIGN" },
+      { id: "arcade", label: "ENDLESS ARCADE", locked: !arcadeUnlocked },
+      { id: "leaderboard", label: "LEADERBOARD" },
+      { id: "help", label: "HELP" },
+    ],
+    [arcadeUnlocked],
+  );
+
+  const selectedLevel = selectedLevelId ? getCampaignLevel(selectedLevelId) : null;
 
   const handleMenuSelect = (id: string) => {
     const next = viewFromMenuId(id);
     if (next) setView(next);
   };
 
+  const handleSelectLevel = (levelId: string) => {
+    setSelectedLevelId(levelId);
+    setBriefOpen(true);
+  };
+
+  const handleStartLevel = () => {
+    setBriefOpen(false);
+    setView("play");
+  };
+
+  const handleExitPlay = () => {
+    setView("campaign");
+  };
+
+  const handleLevelPassed = () => {
+    if (selectedLevelId) {
+      void completeLevel(selectedLevelId);
+    }
+  };
+
+  const showBackdrop = view === "menu" || view === "help";
+
   return (
     <>
-      <IntroTrafficBackdrop />
+      {showBackdrop ? <IntroTrafficBackdrop /> : null}
       {view === "menu" || view === "help" ? (
-        <MainMenuScreen onSelect={handleMenuSelect} />
+        <MainMenuScreen items={menuItems} onSelect={handleMenuSelect} />
       ) : null}
       {view === "campaign" ? (
-        <MenuSubScreen
-          title="CAMPAIGN"
-          subtitle="Progressive traffic trials"
-          body="Route simulated traffic, tune Layer 7 rules, and hit the success target before the queue overflows."
-          note="Level select ships in the next milestone."
+        <CampaignMapScreen
+          progress={progress}
+          loading={loading}
           onBack={() => setView("menu")}
+          onSelectLevel={handleSelectLevel}
         />
       ) : null}
-      {view === "leaderboard" ? (
-        <MenuSubScreen
-          title="LEADERBOARD"
-          subtitle="Endless Arcade standings"
-          body="Three-letter initials and your best run time. Scores stay on this device until cloud sync arrives."
-          note="Score table ships in the next milestone."
-          onBack={() => setView("menu")}
+      {view === "leaderboard" ? <LeaderboardScreen onBack={() => setView("menu")} /> : null}
+      {briefOpen && selectedLevel ? (
+        <CampaignBriefModal
+          level={selectedLevel}
+          onClose={() => setBriefOpen(false)}
+          onStart={handleStartLevel}
+        />
+      ) : null}
+      {view === "play" && selectedLevel ? (
+        <PlayScreen
+          level={selectedLevel}
+          onExit={handleExitPlay}
+          onPassed={handleLevelPassed}
         />
       ) : null}
       {view === "help" ? <HelpOverlay onClose={() => setView("menu")} /> : null}

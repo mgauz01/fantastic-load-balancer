@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
 function getMainMenu() {
@@ -9,7 +9,38 @@ function getMainMenu() {
   return menu!;
 }
 
+function mockProgressApi() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/api/progress")) {
+        return new Response(
+          JSON.stringify({
+            highestUnlocked: 1,
+            completedLevels: [],
+            passBadges: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/api/leaderboard")) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 404 });
+    }),
+  );
+}
+
 describe("App", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mockProgressApi();
+  });
+
   it("renders the light intro menu without HeartBar", () => {
     render(<App />);
 
@@ -21,13 +52,14 @@ describe("App", () => {
     expect(document.querySelector('[data-theme="menu-light"]')).toBeInTheDocument();
   });
 
-  it("navigates to campaign when Campaign is selected", async () => {
+  it("navigates to campaign map when Campaign is selected", async () => {
     const user = userEvent.setup();
     render(<App />);
 
     await user.click(within(getMainMenu()).getByRole("button", { name: /campaign/i }));
 
     expect(screen.getByRole("heading", { name: /^campaign$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /01 rotation basics/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /back to main menu/i })).toBeInTheDocument();
   });
 

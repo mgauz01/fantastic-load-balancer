@@ -1,4 +1,4 @@
-export type AppView = "menu" | "campaign" | "leaderboard" | "help";
+export type AppView = "menu" | "campaign" | "play" | "leaderboard" | "help";
 
 export function viewFromMenuId(id: string): AppView | null {
   switch (id) {
