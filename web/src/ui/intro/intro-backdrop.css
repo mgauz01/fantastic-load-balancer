@@ -1,0 +1,41 @@
+.intro-traffic-backdrop {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  opacity: 0.62;
+  filter: saturate(0.95);
+}
+
+.intro-screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--menu-sky) 0%, var(--menu-sky-deep) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgba(234, 246, 255, 0.15) 8px,
+      rgba(234, 246, 255, 0.15) 16px
+    );
+}
+
+.intro-screen::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    var(--menu-scrim) 100%
+  );
+}
