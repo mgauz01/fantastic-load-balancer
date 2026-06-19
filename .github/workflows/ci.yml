@@ -6,9 +6,45 @@ on:
   pull_request:
     branches: [main, dev]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  web:
+    name: Web tests and build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Typecheck and production bundle
+        run: npm run build
+
+  server:
+    name: Server (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -23,19 +59,28 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Install web dependencies
-        working-directory: web
-        run: npm ci
+      - name: Embed web assets
+        run: bash scripts/embed-web.sh
 
-      - name: Web build (embed assets)
-        run: make web-build
+      - name: Go vet
+        run: go vet ./...
 
       - name: Go test
         run: go test ./...
 
-      - name: Web test
-        working-directory: web
-        run: npm run test
+      - name: Go build
+        run: |
+          VERSION="ci-${{ github.sha }}"
+          GOOS=$(go env GOOS)
+          BIN="flb-server"
+          if [ "$GOOS" = "windows" ]; then
+            BIN="flb-server.exe"
+          fi
+          go build -ldflags "-X main.version=${VERSION}" -o "$BIN" ./cmd/server
+          echo "FLB_BIN=$BIN" >> "$GITHUB_ENV"
+          echo "FLB_VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      - name: Production build
-        run: make build
+      - name: Version flag smoke test
+        run: |
+          OUT="$("./${FLB_BIN}" -version)"
+          test "$OUT" = "$FLB_VERSION"

@@ -1,19 +1,18 @@
-.PHONY: build web-build web-dev web-dev-urls test go-test web-test clean run run-server tunnel tunnel-server wsl-urls
+.PHONY: build web-build web-dev web-dev-urls test go-test web-test vet typecheck clean run run-server tunnel tunnel-server wsl-urls dev version
 
 BINARY := flb-server
 GO := go
 NPM := npm
 PORT ?= 5173
 SERVER_PORT ?= 8080
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+GO_LDFLAGS := -X main.version=$(VERSION)
 
 build: web-build
-	$(GO) build -o $(BINARY) ./cmd/server
+	$(GO) build -ldflags "$(GO_LDFLAGS)" -o $(BINARY) ./cmd/server
 
 web-build:
-	cd web && $(NPM) ci && $(NPM) run build
-	rm -rf internal/server/static/dist
-	mkdir -p internal/server/static
-	cp -r web/dist internal/server/static/dist
+	bash scripts/embed-web.sh
 
 web-dev:
 	cd web && $(NPM) run dev
@@ -27,10 +26,25 @@ web-install:
 go-test:
 	$(GO) test ./...
 
+vet:
+	$(GO) vet ./...
+
+typecheck:
+	cd web && npx tsc --noEmit
+
 web-test:
 	cd web && $(NPM) run test
 
 test: go-test web-test
+
+dev:
+	@echo "Start two terminals:"
+	@echo "  1) make run-server"
+	@echo "  2) make web-dev"
+	@echo "Optional: make tunnel (Windows browser via HTTPS)"
+
+version:
+	@echo $(VERSION)
 
 run: build
 	./$(BINARY) -addr 0.0.0.0:$(SERVER_PORT)
