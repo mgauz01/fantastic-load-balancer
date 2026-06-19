@@ -1,0 +1,28 @@
+[data-theme="menu-light"] {
+  color-scheme: light;
+
+  --menu-sky: #c5e3f6;
+  --menu-sky-deep: #9ecae8;
+  --menu-cloud: #eaf6ff;
+  --color-background: var(--menu-sky);
+  --color-foreground: #1e293b;
+  --color-muted: #64748b;
+  --color-primary: #b91c1c;
+  --color-secondary: #1d4ed8;
+  --color-accent: #16a34a;
+  --color-on-primary: #ffffff;
+  --panel-stone: #9ca3af;
+  --panel-stone-light: #f1f5f9;
+  --panel-stone-dark: #4b5563;
+  --panel-inner: #e2e8f0;
+  --panel-inner-hover: #cbd5e1;
+  --hp-amber: #f59e0b;
+  --traffic-path: #94a3b8;
+  --traffic-packet-get: #2563eb;
+  --traffic-packet-post: #f59e0b;
+  --menu-scrim: rgba(30, 41, 59, 0.06);
+  --menu-overlay-scrim: rgba(15, 23, 42, 0.6);
+  --font-display: "Press Start 2P", monospace;
+  --font-body: "VT323", monospace;
+  --pixel-size: 4px;
+}
