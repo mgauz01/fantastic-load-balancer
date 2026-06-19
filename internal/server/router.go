@@ -5,16 +5,27 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/fantastic-load-balancer/flb/internal/api"
+	"github.com/fantastic-load-balancer/flb/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// Dependencies wires API handlers to their repositories.
+type Dependencies struct {
+	Progress    store.ProgressRepository
+	Leaderboard store.LeaderboardRepository
+}
+
 // NewHandler returns the HTTP router with API routes and embedded SPA fallback.
-func NewHandler() (http.Handler, error) {
+func NewHandler(deps Dependencies) (http.Handler, error) {
 	static, err := fs.Sub(WebDist, "static/dist")
 	if err != nil {
 		return nil, err
 	}
+
+	progressHandler := api.NewProgressHandler(deps.Progress)
+	leaderboardHandler := api.NewLeaderboardHandler(deps.Leaderboard)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -23,6 +34,13 @@ func NewHandler() (http.Handler, error) {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/health", healthHandler)
+
+	r.Route("/api", func(r chi.Router) {
+		r.Get("/progress", progressHandler.Get)
+		r.Put("/progress", progressHandler.Put)
+		r.Get("/leaderboard", leaderboardHandler.Get)
+		r.Post("/leaderboard", leaderboardHandler.Post)
+	})
 
 	fileServer := http.FileServer(http.FS(static))
 	r.NotFound(spaHandler(static, fileServer))
@@ -49,7 +67,6 @@ func spaHandler(static fs.FS, fileServer http.Handler) http.HandlerFunc {
 			return
 		}
 
-		// Client-side routes: serve index.html
 		r.URL.Path = "/"
 		fileServer.ServeHTTP(w, r)
 	}

@@ -9,30 +9,54 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fantastic-load-balancer/flb/internal/config"
 	"github.com/fantastic-load-balancer/flb/internal/server"
+	"github.com/fantastic-load-balancer/flb/internal/store/sqlite"
 )
 
 var version = "dev"
 
 func main() {
-	showVersion := flag.Bool("version", false, "print version and exit")
-	addr := flag.String("addr", "0.0.0.0:8080", "HTTP listen address (use 0.0.0.0 for WSL2 / Windows browser access)")
-	flag.Parse()
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	showVersion := fs.Bool("version", false, "print version and exit")
+	addr := fs.String("addr", "0.0.0.0:8080", "HTTP listen address (use 0.0.0.0 for WSL2 / Windows browser access)")
+	dataDir := fs.String("data-dir", config.DefaultDataDir(), "directory for SQLite database files")
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		log.Fatalf("flags: %v", err)
+	}
 
 	if *showVersion {
 		fmt.Println(version)
 		os.Exit(0)
 	}
 
-	handler, err := server.NewHandler()
+	cfg := config.Config{
+		Addr:    *addr,
+		DataDir: *dataDir,
+	}
+	if env := os.Getenv("FLB_DATA_DIR"); env != "" {
+		cfg.DataDir = env
+	}
+
+	db, err := sqlite.Open(cfg.DBPath())
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer db.Close()
+
+	store := sqlite.NewStore(db)
+	handler, err := server.NewHandler(server.Dependencies{
+		Progress:    store,
+		Leaderboard: store,
+	})
 	if err != nil {
 		log.Fatalf("server init: %v", err)
 	}
 
-	log.Printf("flb-server %s listening on %s", version, *addr)
-	printAccessHints(*addr)
+	log.Printf("flb-server %s listening on %s (db: %s)", version, cfg.Addr, cfg.DBPath())
+	printAccessHints(cfg.Addr)
 
-	if err := http.ListenAndServe(*addr, handler); err != nil {
+	if err := http.ListenAndServe(cfg.Addr, handler); err != nil {
 		log.Fatalf("listen: %v", err)
 	}
 }

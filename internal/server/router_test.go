@@ -7,15 +7,26 @@ import (
 	"testing"
 
 	"github.com/fantastic-load-balancer/flb/internal/server"
+	"github.com/fantastic-load-balancer/flb/internal/store/memory"
 )
+
+func testHandler(t *testing.T) http.Handler {
+	t.Helper()
+
+	handler, err := server.NewHandler(server.Dependencies{
+		Progress:    memory.NewProgressStore(),
+		Leaderboard: memory.NewLeaderboardStore(),
+	})
+	if err != nil {
+		t.Fatalf("NewHandler: %v", err)
+	}
+	return handler
+}
 
 func TestHealthEndpoint(t *testing.T) {
 	t.Parallel()
 
-	handler, err := server.NewHandler()
-	if err != nil {
-		t.Fatalf("NewHandler: %v", err)
-	}
+	handler := testHandler(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
@@ -32,10 +43,7 @@ func TestHealthEndpoint(t *testing.T) {
 func TestEmbeddedIndex(t *testing.T) {
 	t.Parallel()
 
-	handler, err := server.NewHandler()
-	if err != nil {
-		t.Fatalf("NewHandler: %v", err)
-	}
+	handler := testHandler(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
