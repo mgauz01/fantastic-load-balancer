@@ -22,6 +22,7 @@ import {
 } from "../sim/engine";
 import { cumulativeSuccessRate } from "../sim/metrics";
 import { createSeededRandom } from "../sim/rng";
+import { useRuleMutations } from "./useRuleMutations";
 
 const TICK_MS = 1000;
 
@@ -145,6 +146,8 @@ export function useArcadeSession(options: UseArcadeSessionOptions = {}) {
     setState(createSimEngine(buildArcadeSimConfig()));
   }, []);
 
+  const { upsertRule, removeRule } = useRuleMutations(setState);
+
   const successRate = cumulativeSuccessRate(state.metrics);
 
   return {
@@ -154,6 +157,8 @@ export function useArcadeSession(options: UseArcadeSessionOptions = {}) {
     pause,
     resume,
     retry,
+    upsertRule,
+    removeRule,
     successRate,
     spawnRate: spawnRateForTick(state.activeTrafficTicks),
     isRunning: state.phase === "running" && !gameOver,

@@ -37,4 +37,23 @@ describe("useSimSession", () => {
     });
     expect(result.current.state.activeTrafficTicks).toBe(0);
   });
+
+  it("updates listener rules while paused", () => {
+    const level = getCampaignLevel("level_03");
+    expect(level).not.toBeNull();
+
+    const { result } = renderHook(() => useSimSession(level!));
+
+    act(() => {
+      const error = result.current.upsertRule(80, {
+        priority: 10,
+        matchType: "host",
+        matchValue: "app.example",
+        targetPoolId: "static",
+      });
+      expect(error).toBeNull();
+    });
+
+    expect(result.current.state.listenerRules[80]?.playerRules).toHaveLength(1);
+  });
 });

@@ -32,9 +32,10 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
     [onPassed],
   );
 
-  const { state, pause, resume, retry, successRate, isRunning, isPaused } = useSimSession(level, {
-    onResult: handleResult,
-  });
+  const { state, pause, resume, retry, upsertRule, removeRule, successRate, isRunning, isPaused } =
+    useSimSession(level, {
+      onResult: handleResult,
+    });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -78,7 +79,12 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
           <RuleEditorPanel
             listenerPort={listenerPort}
             rules={state.listenerRules[listenerPort]}
+            pools={state.pools}
+            editable={isPaused}
+            displayHeaders={level.displayHeaders}
             onListenerChange={setListenerPort}
+            onUpsertRule={(draft) => upsertRule(listenerPort, draft)}
+            onDeleteRule={(ruleId) => removeRule(listenerPort, ruleId)}
           />
           <HealthPanel
             pools={state.pools}

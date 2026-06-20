@@ -18,7 +18,7 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
   const [listenerPort, setListenerPort] = useState<ListenerPort>(80);
   const [showInitials, setShowInitials] = useState(false);
 
-  const { state, scoreState, gameOver, pause, resume, retry, successRate, spawnRate, isRunning, isPaused } =
+  const { state, scoreState, gameOver, pause, resume, retry, upsertRule, removeRule, successRate, spawnRate, isRunning, isPaused } =
     useArcadeSession({
       onGameOver: () => setShowInitials(true),
     });
@@ -68,7 +68,11 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
           <RuleEditorPanel
             listenerPort={listenerPort}
             rules={state.listenerRules[listenerPort]}
+            pools={state.pools}
+            editable={isPaused && !gameOver}
             onListenerChange={setListenerPort}
+            onUpsertRule={(draft) => upsertRule(listenerPort, draft)}
+            onDeleteRule={(ruleId) => removeRule(listenerPort, ruleId)}
           />
           <HealthPanel
             pools={state.pools}

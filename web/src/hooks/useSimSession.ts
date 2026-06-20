@@ -10,6 +10,7 @@ import {
   type SimEngineState,
 } from "../sim/engine";
 import { cumulativeSuccessRate } from "../sim/metrics";
+import { useRuleMutations } from "./useRuleMutations";
 
 const TICK_MS = 1000;
 
@@ -116,6 +117,8 @@ export function useSimSession(level: CampaignLevel, options: UseSimSessionOption
     setState(createSimEngine(buildSimConfig(level)));
   }, [level]);
 
+  const { upsertRule, removeRule } = useRuleMutations(setState);
+
   const successRate = cumulativeSuccessRate(state.metrics);
 
   return {
@@ -123,6 +126,8 @@ export function useSimSession(level: CampaignLevel, options: UseSimSessionOption
     pause,
     resume,
     retry,
+    upsertRule,
+    removeRule,
     successRate,
     isRunning: state.phase === "running",
     isPaused: state.phase === "configure",
