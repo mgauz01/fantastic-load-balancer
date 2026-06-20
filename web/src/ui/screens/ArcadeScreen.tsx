@@ -63,7 +63,7 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
 
       <div className="play-screen__grid">
         <TrafficLogPanel entries={state.log} />
-        <TrafficStage latestEntry={latestEntry} />
+        <TrafficStage latestEntry={latestEntry} pools={state.pools} paused={isPaused || Boolean(gameOver)} />
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <RuleEditorPanel
             listenerPort={listenerPort}

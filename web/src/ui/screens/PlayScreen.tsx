@@ -74,7 +74,7 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
 
       <div className="play-screen__grid">
         <TrafficLogPanel entries={state.log} />
-        <TrafficStage latestEntry={latestEntry} />
+        <TrafficStage latestEntry={latestEntry} pools={state.pools} paused={isPaused} />
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <RuleEditorPanel
             listenerPort={listenerPort}

@@ -347,6 +347,7 @@
   max-width: 320px;
   aspect-ratio: 16 / 9;
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
   background: #111827;
 }
 

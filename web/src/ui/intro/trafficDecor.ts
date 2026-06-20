@@ -1,3 +1,5 @@
+import { drawServer } from "../canvas/canvasDraw";
+
 export const DECOR_WIDTH = 320;
 export const DECOR_HEIGHT = 180;
 export const MAX_DECOR_PACKETS = 12;
@@ -143,17 +145,4 @@ export function drawDecorTraffic(
   }
 
   ctx.restore();
-}
-
-function drawServer(ctx: CanvasRenderingContext2D, x: number, y: number, color: string): void {
-  const left = Math.round(x - 8);
-  const top = Math.round(y - 6);
-  ctx.fillStyle = color;
-  ctx.fillRect(left, top, 16, 12);
-  ctx.fillStyle = "#f1f5f9";
-  ctx.fillRect(left + 4, top + 2, 8, 4);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.fillRect(left, top, 16, 2);
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.fillRect(left, top + 10, 16, 2);
 }
