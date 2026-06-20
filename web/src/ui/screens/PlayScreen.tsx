@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { CampaignLevel } from "../../game/types";
 import { useSimSession } from "../../hooks/useSimSession";
 import type { ListenerPort } from "../../sim/types";
@@ -6,6 +6,9 @@ import TrafficStage from "../canvas/TrafficStage";
 import HealthPanel from "../panels/HealthPanel";
 import RuleEditorPanel from "../panels/RuleEditorPanel";
 import TrafficLogPanel from "../panels/TrafficLogPanel";
+import PlayHelpOverlay from "../play/PlayHelpOverlay";
+import PlayScreenPanels from "../play/PlayScreenPanels";
+import { usePlayKeyboard } from "../play/usePlayKeyboard";
 import "../theme/play.css";
 
 interface PlayScreenProps {
@@ -17,6 +20,7 @@ interface PlayScreenProps {
 export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps) {
   const [listenerPort, setListenerPort] = useState<ListenerPort>(80);
   const [resultBanner, setResultBanner] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleResult = useCallback(
     (result: { status: "running" | "passed" | "failed_time" | "failed_early" }) => {
@@ -37,19 +41,24 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
       onResult: handleResult,
     });
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "?" && isRunning) {
-        event.preventDefault();
-        pause();
-      }
-      if (event.key === "Escape") {
-        pause();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+  const openHelp = useCallback(() => {
+    if (isRunning) {
+      pause();
+    }
+    setShowHelp(true);
   }, [isRunning, pause]);
+
+  const closeHelp = useCallback(() => {
+    setShowHelp(false);
+  }, []);
+
+  usePlayKeyboard({
+    isRunning,
+    showHelp,
+    onPause: pause,
+    onOpenHelp: openHelp,
+    onCloseHelp: closeHelp,
+  });
 
   const latestEntry = state.log[state.log.length - 1] ?? null;
 
@@ -72,10 +81,12 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
         </p>
       ) : null}
 
-      <div className="play-screen__grid">
-        <TrafficLogPanel entries={state.log} />
-        <TrafficStage latestEntry={latestEntry} pools={state.pools} paused={isPaused} />
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <PlayScreenPanels
+        log={<TrafficLogPanel entries={state.log} />}
+        stage={
+          <TrafficStage latestEntry={latestEntry} pools={state.pools} paused={isPaused} />
+        }
+        rules={
           <RuleEditorPanel
             listenerPort={listenerPort}
             rules={state.listenerRules[listenerPort]}
@@ -86,13 +97,15 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
             onUpsertRule={(draft) => upsertRule(listenerPort, draft)}
             onDeleteRule={(ruleId) => removeRule(listenerPort, ruleId)}
           />
+        }
+        health={
           <HealthPanel
             pools={state.pools}
             recoveryTimers={state.healthRecoveryTimers}
             autoRecovery={level.autoRecovery}
           />
-        </div>
-      </div>
+        }
+      />
 
       <div className="play-toolbar">
         {isPaused ? (
@@ -104,6 +117,9 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
             PAUSE
           </button>
         )}
+        <button type="button" onClick={openHelp}>
+          HELP
+        </button>
         <button type="button" onClick={retry}>
           RETRY
         </button>
@@ -111,6 +127,8 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
           EXIT
         </button>
       </div>
+
+      {showHelp ? <PlayHelpOverlay onClose={closeHelp} /> : null}
     </div>
   );
 }

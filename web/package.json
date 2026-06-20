@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "validate-levels": "node scripts/validate-levels.mjs"
   },
   "dependencies": {
     "@pixelore/react": "^0.2.1",
@@ -25,6 +26,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
     "jsdom": "^26.1.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "tailwindcss": "^4.3.1",
     "typescript": "~5.8.3",
     "vite": "^6.4.3",

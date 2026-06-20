@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate campaign level JSON
+        run: npm run validate-levels
+
       - name: Unit tests
         run: npm run test
 

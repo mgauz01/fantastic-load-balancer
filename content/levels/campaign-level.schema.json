@@ -1,0 +1,213 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fantastic-load-balancer.dev/schemas/campaign-level.json",
+  "title": "CampaignLevel",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "index",
+    "title",
+    "briefMarkdown",
+    "pools",
+    "listeners",
+    "autoRecovery",
+    "recoveryTicks",
+    "displayHeaders",
+    "passThreshold",
+    "trafficSpawns",
+    "healthEvents"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^level_\\d{2}$"
+    },
+    "index": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 99
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "briefMarkdown": {
+      "type": "string"
+    },
+    "pools": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/pool" }
+    },
+    "listeners": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "80": { "$ref": "#/$defs/listenerConfig" },
+        "443": { "$ref": "#/$defs/listenerConfig" }
+      }
+    },
+    "autoRecovery": {
+      "type": "boolean"
+    },
+    "recoveryTicks": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "displayHeaders": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "passThreshold": { "$ref": "#/$defs/passThreshold" },
+    "trafficSpawns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/trafficSpawn" }
+    },
+    "healthEvents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/healthEvent" }
+    },
+    "capstoneMistakes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/capstoneMistake" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "pool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "stickyEnabled", "backends"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "stickyEnabled": { "type": "boolean" },
+        "backends": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/backend" }
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "weight"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "weight": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "listenerConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultRule", "starterRules"],
+      "properties": {
+        "defaultRule": { "$ref": "#/$defs/defaultRule" },
+        "starterRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/playerRule" }
+        }
+      }
+    },
+    "defaultRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "action"],
+      "properties": {
+        "priority": { "type": "integer" },
+        "action": { "type": "string", "enum": ["route", "deny"] },
+        "targetPoolId": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "action": { "const": "route" } } },
+          "then": { "required": ["targetPoolId"] }
+        }
+      ]
+    },
+    "playerRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "matchType", "matchValue", "targetPoolId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "priority": { "type": "integer" },
+        "matchType": {
+          "type": "string",
+          "enum": ["host", "path_prefix", "header"]
+        },
+        "matchValue": { "type": "string", "minLength": 1 },
+        "headerName": { "type": "string", "minLength": 1 },
+        "targetPoolId": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "matchType": { "const": "header" } } },
+          "then": { "required": ["headerName"] }
+        }
+      ]
+    },
+    "passThreshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["successRate", "durationTicks"],
+      "properties": {
+        "successRate": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "durationTicks": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "trafficSpawn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["everyTicks", "count", "template"],
+      "properties": {
+        "everyTicks": { "type": "integer", "minimum": 1 },
+        "count": { "type": "integer", "minimum": 1 },
+        "template": { "$ref": "#/$defs/trafficTemplate" }
+      }
+    },
+    "trafficTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "path", "method", "listenerPort"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+        },
+        "listenerPort": { "type": "integer", "enum": [80, 443] },
+        "headers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "sessionCookie": { "type": "string", "minLength": 1 }
+      }
+    },
+    "healthEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tick", "backendId", "health"],
+      "properties": {
+        "tick": { "type": "integer", "minimum": 1 },
+        "backendId": { "type": "string", "minLength": 1 },
+        "health": { "type": "string", "enum": ["healthy", "unhealthy"] }
+      }
+    },
+    "capstoneMistake": {
+      "type": "string",
+      "enum": [
+        "wrong_host_pool",
+        "narrow_path_prefix",
+        "missing_eu_header",
+        "missing_tls_mirror",
+        "priority_inversion"
+      ]
+    }
+  }
+}

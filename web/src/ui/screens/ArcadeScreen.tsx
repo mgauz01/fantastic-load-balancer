@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { currentStreakMultiplier } from "../../game/arcade";
 import { useArcadeSession } from "../../hooks/useArcadeSession";
 import type { ListenerPort } from "../../sim/types";
@@ -7,6 +7,9 @@ import TrafficStage from "../canvas/TrafficStage";
 import HealthPanel from "../panels/HealthPanel";
 import RuleEditorPanel from "../panels/RuleEditorPanel";
 import TrafficLogPanel from "../panels/TrafficLogPanel";
+import PlayHelpOverlay from "../play/PlayHelpOverlay";
+import PlayScreenPanels from "../play/PlayScreenPanels";
+import { usePlayKeyboard } from "../play/usePlayKeyboard";
 import "../theme/play.css";
 
 interface ArcadeScreenProps {
@@ -17,25 +20,32 @@ interface ArcadeScreenProps {
 export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreenProps) {
   const [listenerPort, setListenerPort] = useState<ListenerPort>(80);
   const [showInitials, setShowInitials] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const { state, scoreState, gameOver, pause, resume, retry, upsertRule, removeRule, successRate, spawnRate, isRunning, isPaused } =
     useArcadeSession({
       onGameOver: () => setShowInitials(true),
     });
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "?" && isRunning) {
-        event.preventDefault();
-        pause();
-      }
-      if (event.key === "Escape" && !gameOver) {
-        pause();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [gameOver, isRunning, pause]);
+  const openHelp = useCallback(() => {
+    if (!gameOver) {
+      pause();
+    }
+    setShowHelp(true);
+  }, [gameOver, pause]);
+
+  const closeHelp = useCallback(() => {
+    setShowHelp(false);
+  }, []);
+
+  usePlayKeyboard({
+    isRunning,
+    showHelp,
+    onPause: pause,
+    onOpenHelp: openHelp,
+    onCloseHelp: closeHelp,
+    disabled: Boolean(gameOver),
+  });
 
   const latestEntry = state.log[state.log.length - 1] ?? null;
   const multiplier = currentStreakMultiplier(scoreState.streak);
@@ -61,10 +71,16 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
         </p>
       ) : null}
 
-      <div className="play-screen__grid">
-        <TrafficLogPanel entries={state.log} />
-        <TrafficStage latestEntry={latestEntry} pools={state.pools} paused={isPaused || Boolean(gameOver)} />
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <PlayScreenPanels
+        log={<TrafficLogPanel entries={state.log} />}
+        stage={
+          <TrafficStage
+            latestEntry={latestEntry}
+            pools={state.pools}
+            paused={isPaused || Boolean(gameOver)}
+          />
+        }
+        rules={
           <RuleEditorPanel
             listenerPort={listenerPort}
             rules={state.listenerRules[listenerPort]}
@@ -74,13 +90,15 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
             onUpsertRule={(draft) => upsertRule(listenerPort, draft)}
             onDeleteRule={(ruleId) => removeRule(listenerPort, ruleId)}
           />
+        }
+        health={
           <HealthPanel
             pools={state.pools}
             recoveryTimers={state.healthRecoveryTimers}
             autoRecovery
           />
-        </div>
-      </div>
+        }
+      />
 
       <div className="play-toolbar">
         {gameOver ? (
@@ -106,6 +124,9 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
                 PAUSE
               </button>
             )}
+            <button type="button" onClick={openHelp}>
+              HELP
+            </button>
             <button type="button" onClick={retry}>
               RETRY
             </button>
@@ -127,6 +148,8 @@ export default function ArcadeScreen({ onExit, onViewLeaderboard }: ArcadeScreen
           }}
         />
       ) : null}
+
+      {showHelp ? <PlayHelpOverlay onClose={closeHelp} /> : null}
     </div>
   );
 }
