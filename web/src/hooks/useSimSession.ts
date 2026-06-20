@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { evaluateAttempt } from "../game/evaluator";
-import { buildSimConfig, healthEventsForTick, spawnRequestsForTick } from "../game/levelSim";
+import {
+  applyCampaignHealthForTick,
+  buildSimConfig,
+  spawnRequestsForTick,
+} from "../game/levelSim";
 import type { CampaignLevel } from "../game/types";
 import {
   createSimEngine,
-  setBackendHealth,
   setPhase,
   tick,
   type SimEngineState,
@@ -32,17 +35,6 @@ export function useSimSession(level: CampaignLevel, options: UseSimSessionOption
   const onResultRef = useRef(options.onResult);
   onResultRef.current = options.onResult;
 
-  const applyHealthEvents = useCallback(
-    (engine: SimEngineState, activeTick: number) => {
-      let next = engine;
-      for (const event of healthEventsForTick(level, activeTick)) {
-        next = setBackendHealth(next, event.backendId, event.health);
-      }
-      return next;
-    },
-    [level],
-  );
-
   const advanceTick = useCallback(() => {
     setState((current) => {
       if (current.phase !== "running") {
@@ -50,9 +42,13 @@ export function useSimSession(level: CampaignLevel, options: UseSimSessionOption
       }
 
       const nextTick = current.activeTrafficTicks + 1;
-      let next = applyHealthEvents(current, nextTick);
+      const { state: afterHealth, recoveryTicks } = applyCampaignHealthForTick(
+        current,
+        level,
+        nextTick,
+      );
       const incoming = spawnRequestsForTick(level, nextTick, sequenceRef.current++);
-      next = tick(next, { incoming });
+      const next = tick(afterHealth, { incoming, recoveryTicks });
 
       const remaining = Math.max(
         0,
@@ -70,7 +66,7 @@ export function useSimSession(level: CampaignLevel, options: UseSimSessionOption
 
       return next;
     });
-  }, [applyHealthEvents, level]);
+  }, [level]);
 
   useEffect(() => {
     if (state.phase !== "running") {

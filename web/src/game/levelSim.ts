@@ -1,6 +1,7 @@
 import type { CampaignLevel } from "./types";
 import type { IncomingRequest, ListenerPort } from "../sim/types";
-import type { SimEngineConfig } from "../sim/engine";
+import type { SimEngineConfig, SimEngineState } from "../sim/engine";
+import { setBackendHealth } from "../sim/engine";
 import { poolsToSimRecord } from "./campaign";
 
 export function buildSimConfig(level: CampaignLevel, rngSeed = 42): SimEngineConfig {
@@ -54,4 +55,27 @@ export function spawnRequestsForTick(
 
 export function healthEventsForTick(level: CampaignLevel, tick: number) {
   return level.healthEvents.filter((event) => event.tick === tick);
+}
+
+export interface CampaignHealthStep {
+  state: SimEngineState;
+  recoveryTicks: Record<string, number>;
+}
+
+export function applyCampaignHealthForTick(
+  state: SimEngineState,
+  level: CampaignLevel,
+  tick: number,
+): CampaignHealthStep {
+  let next = state;
+  const recoveryTicks: Record<string, number> = {};
+
+  for (const event of healthEventsForTick(level, tick)) {
+    next = setBackendHealth(next, event.backendId, event.health);
+    if (level.autoRecovery && level.recoveryTicks > 0 && event.health === "unhealthy") {
+      recoveryTicks[event.backendId] = level.recoveryTicks;
+    }
+  }
+
+  return { state: next, recoveryTicks };
 }
