@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createMetricsSnapshot, recordRouteOutcome } from "../sim/metrics";
+import { createPlayerRuleId, resetPlayerRuleIdCounter } from "../sim/ruleEditor";
 import { getCampaignLevel, levelIDForIndex, listCampaignLevels } from "./campaign";
+import { buildSimConfig } from "./levelSim";
 import {
   canPassWithoutWaiting,
   evaluateAttempt,
   validateCapstoneMistakes,
 } from "./evaluator";
+import { createSimEngine, setPhase, tick } from "../sim/engine";
 
 describe("campaign levels", () => {
   it("loads eight ordered campaign levels", () => {
@@ -21,6 +24,18 @@ describe("campaign levels", () => {
     expect(level).not.toBeNull();
     expect(level!.listeners[80]?.defaultRule.action).toBe("route");
     expect(level!.passThreshold).toEqual({ successRate: 0.9, durationTicks: 45 });
+  });
+
+  it("level 2 denies by default and coaches a host rule", () => {
+    const level = getCampaignLevel("level_02");
+    expect(level!.listeners[80]?.defaultRule.action).toBe("deny");
+    expect(level!.playHint).toMatch(/metrics\.example/i);
+    expect(level!.ruleCoach).toEqual({
+      priority: 10,
+      matchType: "host",
+      matchValue: "metrics.example",
+      targetPoolId: "split",
+    });
   });
 
   it("level 3 defaults to deny on :80", () => {
@@ -109,5 +124,61 @@ describe("campaign evaluator", () => {
         estimatedRemainingRequests: 0,
       }),
     ).toBe("failed_time");
+  });
+
+  it("level 2 denies traffic until a coached host rule is added", () => {
+    resetPlayerRuleIdCounter();
+    const level = getCampaignLevel("level_02")!;
+    let state = createSimEngine(buildSimConfig(level));
+    state = setPhase(state, "running");
+
+    state = tick(state, {
+      incoming: [
+        {
+          id: "req-1",
+          listenerPort: 80,
+          host: "metrics.example",
+          path: "/report",
+          method: "GET",
+          headers: {},
+        },
+      ],
+    });
+
+    expect(state.log[0]?.outcome).toBe(503);
+
+    state = {
+      ...state,
+      listenerRules: {
+        ...state.listenerRules,
+        80: {
+          ...state.listenerRules[80]!,
+          playerRules: [
+            {
+              id: createPlayerRuleId(),
+              priority: 10,
+              matchType: "host",
+              matchValue: "metrics.example",
+              targetPoolId: "split",
+            },
+          ],
+        },
+      },
+    };
+
+    state = tick(state, {
+      incoming: [
+        {
+          id: "req-2",
+          listenerPort: 80,
+          host: "metrics.example",
+          path: "/report",
+          method: "GET",
+          headers: {},
+        },
+      ],
+    });
+
+    expect(state.log.at(-1)?.outcome).toBe(200);
   });
 });

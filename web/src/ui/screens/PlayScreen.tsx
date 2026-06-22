@@ -61,6 +61,9 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
   });
 
   const latestEntry = state.log[state.log.length - 1] ?? null;
+  const listenerRules = state.listenerRules[listenerPort];
+  const needsTutorialRule =
+    Boolean(level.playHint) && (listenerRules?.playerRules.length ?? 0) === 0;
 
   return (
     <div className="play-screen" data-theme="play">
@@ -81,6 +84,12 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
         </p>
       ) : null}
 
+      {level.playHint && needsTutorialRule ? (
+        <p className="play-screen__coach" role="status">
+          {level.playHint}
+        </p>
+      ) : null}
+
       <PlayScreenPanels
         log={<TrafficLogPanel entries={state.log} />}
         stage={
@@ -89,10 +98,11 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
         rules={
           <RuleEditorPanel
             listenerPort={listenerPort}
-            rules={state.listenerRules[listenerPort]}
+            rules={listenerRules}
             pools={state.pools}
             editable={isPaused}
             displayHeaders={level.displayHeaders}
+            coach={level.ruleCoach}
             onListenerChange={setListenerPort}
             onUpsertRule={(draft) => upsertRule(listenerPort, draft)}
             onDeleteRule={(ruleId) => removeRule(listenerPort, ruleId)}
@@ -109,7 +119,7 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
 
       <div className="play-toolbar">
         {isPaused ? (
-          <button type="button" onClick={resume}>
+          <button type="button" onClick={resume} disabled={needsTutorialRule}>
             RESUME
           </button>
         ) : (

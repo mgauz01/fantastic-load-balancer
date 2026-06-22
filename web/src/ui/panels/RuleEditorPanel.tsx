@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { RuleCoach } from "../../game/types";
 import {
   createPlayerRuleId,
   nextSuggestedPriority,
@@ -13,6 +14,7 @@ interface RuleEditorPanelProps {
   pools: Record<string, BackendPool>;
   editable: boolean;
   displayHeaders?: string[];
+  coach?: RuleCoach;
   onListenerChange: (port: ListenerPort) => void;
   onUpsertRule: (draft: RuleDraft) => string | null;
   onDeleteRule: (ruleId: string) => string | null;
@@ -31,6 +33,7 @@ export default function RuleEditorPanel({
   pools,
   editable,
   displayHeaders = [],
+  coach,
   onListenerChange,
   onUpsertRule,
   onDeleteRule,
@@ -50,10 +53,21 @@ export default function RuleEditorPanel({
 
   useEffect(() => {
     if (selectedRuleId === "new") {
-      setDraft({
-        ...EMPTY_DRAFT(nextSuggestedPriority(sortedRules)),
-        targetPoolId: poolOptions[0]?.id ?? "",
-      });
+      const priority = nextSuggestedPriority(sortedRules);
+      if (coach && sortedRules.length === 0) {
+        setDraft({
+          ...EMPTY_DRAFT(coach.priority ?? priority),
+          matchType: coach.matchType,
+          matchValue: coach.matchValue,
+          headerName: coach.headerName,
+          targetPoolId: coach.targetPoolId,
+        });
+      } else {
+        setDraft({
+          ...EMPTY_DRAFT(priority),
+          targetPoolId: poolOptions[0]?.id ?? "",
+        });
+      }
       return;
     }
 
@@ -61,7 +75,7 @@ export default function RuleEditorPanel({
     if (selected) {
       setDraft(playerRuleToDraft(selected));
     }
-  }, [listenerPort, poolOptions, selectedRuleId, sortedRules]);
+  }, [coach, listenerPort, poolOptions, selectedRuleId, sortedRules]);
 
   const validateDraft = (): string | null => {
     if (!rules) {

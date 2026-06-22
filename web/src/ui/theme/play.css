@@ -51,6 +51,17 @@
   font-size: 22px;
 }
 
+.play-screen__coach {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-display);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--color-accent);
+  border: 2px solid var(--color-accent);
+  background: rgba(34, 197, 94, 0.08);
+}
+
 .play-screen__grid {
   display: grid;
   grid-template-columns: 1fr;

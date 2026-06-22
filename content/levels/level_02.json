@@ -2,7 +2,14 @@
   "id": "level_02",
   "index": 2,
   "title": "Weighted Split",
-  "briefMarkdown": "Observe a 70/30 weighted pool. Rules stay fixed; success means keeping the cumulative rate above threshold.",
+  "briefMarkdown": "The default rule denies traffic on :80. You start paused — open RULES, add a host rule for metrics.example to the Split Pool, SAVE, then RESUME. Watch the 70/30 weighted split while traffic runs.",
+  "playHint": "RULES tab → host metrics.example → Split Pool → SAVE → RESUME",
+  "ruleCoach": {
+    "priority": 10,
+    "matchType": "host",
+    "matchValue": "metrics.example",
+    "targetPoolId": "split"
+  },
   "pools": [
     {
       "id": "split",
@@ -16,7 +23,7 @@
   ],
   "listeners": {
     "80": {
-      "defaultRule": { "priority": 100, "action": "route", "targetPoolId": "split" },
+      "defaultRule": { "priority": 100, "action": "deny" },
       "starterRules": []
     }
   },

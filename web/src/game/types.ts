@@ -51,11 +51,21 @@ export type CapstoneMistake =
   | "missing_tls_mirror"
   | "priority_inversion";
 
+export interface RuleCoach {
+  priority?: number;
+  matchType: PlayerRule["matchType"];
+  matchValue: string;
+  headerName?: string;
+  targetPoolId: string;
+}
+
 export interface CampaignLevel {
   id: string;
   index: number;
   title: string;
   briefMarkdown: string;
+  playHint?: string;
+  ruleCoach?: RuleCoach;
   pools: LevelPool[];
   listeners: Partial<Record<ListenerPort, ListenerConfig>>;
   autoRecovery: boolean;
