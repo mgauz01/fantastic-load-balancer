@@ -1,14 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import PlayHelpOverlay from "./PlayHelpOverlay";
+import HelpOverlay from "./HelpOverlay";
 
-describe("PlayHelpOverlay", () => {
+describe("HelpOverlay", () => {
   it("renders play help copy and closes from the close button", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
-    render(<PlayHelpOverlay onClose={onClose} />);
+    render(<HelpOverlay variant="play" onClose={onClose} />);
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText(/Press PAUSE or \? during a run/i)).toBeInTheDocument();

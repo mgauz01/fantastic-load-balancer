@@ -3,7 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"embed"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,12 +11,11 @@ import (
 	"time"
 
 	"github.com/fantastic-load-balancer/flb/internal/domain"
-	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
 
-//go:embed migrations/*.sql
-var migrationFS embed.FS
+//go:embed migrations/schema.sql
+var schemaSQL string
 
 // Open opens (or creates) a WAL SQLite database and runs migrations.
 func Open(path string) (*sql.DB, error) {
@@ -35,12 +34,7 @@ func Open(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
 
-	goose.SetBaseFS(migrationFS)
-	if err := goose.SetDialect("sqlite"); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("goose dialect: %w", err)
-	}
-	if err := goose.Up(db, "migrations"); err != nil {
+	if _, err := db.Exec(schemaSQL); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}

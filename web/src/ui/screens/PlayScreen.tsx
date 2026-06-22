@@ -6,7 +6,7 @@ import TrafficStage from "../canvas/TrafficStage";
 import HealthPanel from "../panels/HealthPanel";
 import RuleEditorPanel from "../panels/RuleEditorPanel";
 import TrafficLogPanel from "../panels/TrafficLogPanel";
-import PlayHelpOverlay from "../play/PlayHelpOverlay";
+import HelpOverlay from "../intro/HelpOverlay";
 import PlayScreenPanels from "../play/PlayScreenPanels";
 import { usePlayKeyboard } from "../play/usePlayKeyboard";
 import "../theme/play.css";
@@ -128,7 +128,7 @@ export default function PlayScreen({ level, onExit, onPassed }: PlayScreenProps)
         </button>
       </div>
 
-      {showHelp ? <PlayHelpOverlay onClose={closeHelp} /> : null}
+      {showHelp ? <HelpOverlay variant="play" onClose={closeHelp} /> : null}
     </div>
   );
 }

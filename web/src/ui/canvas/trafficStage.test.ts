@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { RequestLogEntry } from "../../sim/types";
 import {
+  MAX_INTRO_PACKETS,
   buildStageLayout,
+  createIntroTrafficState,
   createStageTrafficState,
   enqueueStageRequest,
+  tickIntroTraffic,
   tickStageTraffic,
 } from "./trafficStage";
 
@@ -40,6 +43,34 @@ const deniedEntry: RequestLogEntry = {
   backendId: null,
   backendName: null,
 };
+
+describe("intro traffic", () => {
+  it("initializes at most MAX_INTRO_PACKETS packets", () => {
+    const state = createIntroTrafficState();
+    expect(state.packets.length).toBeLessThanOrEqual(MAX_INTRO_PACKETS);
+    expect(state.packets.length).toBeGreaterThan(0);
+    expect(state.backends.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("advances packet progress over ticks", () => {
+    const before = createIntroTrafficState();
+    const firstProgress = before.packets[0]?.progress ?? 0;
+    const after = tickIntroTraffic(before);
+    expect(after.packets[0]?.progress ?? 0).toBeGreaterThan(firstProgress);
+  });
+
+  it("does not advance when frozen (reduced motion)", () => {
+    const state = createIntroTrafficState();
+    const frozen = tickIntroTraffic(state, { frozen: true });
+    expect(frozen.packets).toEqual(state.packets);
+  });
+
+  it("does not advance when paused", () => {
+    const state = createIntroTrafficState();
+    const paused = tickIntroTraffic(state, { paused: true });
+    expect(paused.packets).toEqual(state.packets);
+  });
+});
 
 describe("trafficStage", () => {
   it("positions backends vertically from pool layout", () => {

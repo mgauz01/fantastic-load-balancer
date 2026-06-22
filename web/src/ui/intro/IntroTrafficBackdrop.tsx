@@ -1,88 +1,42 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import {
-  DECOR_HEIGHT,
-  DECOR_TICK_MS,
-  DECOR_WIDTH,
-  createDecorTrafficState,
-  drawDecorTraffic,
-  tickDecorTraffic,
-  type DecorTrafficState,
-} from "./trafficDecor";
+  CANVAS_HEIGHT,
+  CANVAS_TICK_MS,
+  CANVAS_WIDTH,
+  createIntroTrafficState,
+  drawIntroTraffic,
+  tickIntroTraffic,
+  type IntroTrafficState,
+} from "../canvas/trafficStage";
+import { useCanvasLoop } from "../canvas/useCanvasLoop";
 import "./intro-backdrop.css";
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
 
 export default function IntroTrafficBackdrop() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef<DecorTrafficState>(createDecorTrafficState());
-  const rafRef = useRef<number | null>(null);
-  const lastTickRef = useRef<number>(0);
-  const frozenRef = useRef(prefersReducedMotion());
+  const stateRef = useRef<IntroTrafficState>(createIntroTrafficState());
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const reducedMq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onReducedChange = () => {
-      frozenRef.current = reducedMq.matches;
-    };
-    reducedMq.addEventListener("change", onReducedChange);
-
-    const resize = () => {
+  useCanvasLoop(canvasRef, CANVAS_TICK_MS, false, {
+    setupCanvas: (canvas) => {
       const dpr = window.devicePixelRatio || 1;
       const scale = Math.max(
-        window.innerWidth / DECOR_WIDTH,
-        window.innerHeight / DECOR_HEIGHT,
+        window.innerWidth / CANVAS_WIDTH,
+        window.innerHeight / CANVAS_HEIGHT,
       );
       const displayScale = Math.ceil(scale * 2) / 2;
 
-      canvas.width = DECOR_WIDTH * dpr;
-      canvas.height = DECOR_HEIGHT * dpr;
-      canvas.style.width = `${DECOR_WIDTH * displayScale}px`;
-      canvas.style.height = `${DECOR_HEIGHT * displayScale}px`;
-
-      drawDecorTraffic(ctx, stateRef.current, dpr);
-    };
-
-    resize();
-    window.addEventListener("resize", resize);
-
-    const frame = (now: number) => {
-      if (!document.hidden && !frozenRef.current) {
-        if (now - lastTickRef.current >= DECOR_TICK_MS) {
-          const delta = now - lastTickRef.current;
-          lastTickRef.current = now;
-          stateRef.current = tickDecorTraffic(stateRef.current, delta, {
-            paused: document.hidden,
-            frozen: frozenRef.current,
-          });
-        }
-      }
-
-      const dpr = window.devicePixelRatio || 1;
-      drawDecorTraffic(ctx, stateRef.current, dpr);
-      rafRef.current = window.requestAnimationFrame(frame);
-    };
-
-    rafRef.current = window.requestAnimationFrame(frame);
-
-    return () => {
-      reducedMq.removeEventListener("change", onReducedChange);
-      window.removeEventListener("resize", resize);
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-      }
-    };
-  }, []);
+      canvas.width = CANVAS_WIDTH * dpr;
+      canvas.height = CANVAS_HEIGHT * dpr;
+      canvas.style.width = `${CANVAS_WIDTH * displayScale}px`;
+      canvas.style.height = `${CANVAS_HEIGHT * displayScale}px`;
+      return dpr;
+    },
+    onTick: () => {
+      stateRef.current = tickIntroTraffic(stateRef.current);
+    },
+    onDraw: (ctx, drawScale) => {
+      drawIntroTraffic(ctx, stateRef.current, drawScale);
+    },
+  });
 
   return (
     <canvas

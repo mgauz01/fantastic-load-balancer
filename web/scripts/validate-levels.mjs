@@ -1,5 +1,4 @@
 import Ajv from "ajv";
-import addFormats from "ajv-formats";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +10,6 @@ const schemaPath = join(levelsDir, "campaign-level.schema.json");
 
 const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
 const ajv = new Ajv({ allErrors: true, strict: false });
-addFormats(ajv);
 const validate = ajv.compile(schema);
 
 function collectPoolIds(level) {

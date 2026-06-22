@@ -1,11 +1,31 @@
 import type { BackendPool, HttpMethod, RequestLogEntry, RouteOutcome } from "../../sim/types";
 import { drawClient, drawServer } from "./canvasDraw";
-import { getPointOnPath, type DecorPath } from "../intro/trafficDecor";
 
-export const STAGE_WIDTH = 320;
-export const STAGE_HEIGHT = 180;
-export const STAGE_TICK_MS = 100;
+export const CANVAS_WIDTH = 320;
+export const CANVAS_HEIGHT = 180;
+export const CANVAS_TICK_MS = 100;
+export const STAGE_WIDTH = CANVAS_WIDTH;
+export const STAGE_HEIGHT = CANVAS_HEIGHT;
+export const STAGE_TICK_MS = CANVAS_TICK_MS;
 export const MAX_STAGE_PACKETS = 16;
+
+export interface TrafficPath {
+  points: Array<{ x: number; y: number }>;
+}
+
+export function getPointOnPath(path: TrafficPath, t: number): { x: number; y: number } {
+  const clamped = Math.max(0, Math.min(1, t));
+  const segments = path.points.length - 1;
+  const scaled = clamped * segments;
+  const index = Math.min(Math.floor(scaled), segments - 1);
+  const localT = scaled - index;
+  const a = path.points[index]!;
+  const b = path.points[index + 1]!;
+  return {
+    x: a.x + (b.x - a.x) * localT,
+    y: a.y + (b.y - a.y) * localT,
+  };
+}
 
 export interface StageBackend {
   id: string;
@@ -22,7 +42,7 @@ export interface StageLayout {
 
 export interface StageAmbientPacket {
   id: number;
-  path: DecorPath;
+  path: TrafficPath;
   progress: number;
   speed: number;
   kind: "get" | "post";
@@ -32,7 +52,7 @@ export interface StageRequestAnimation {
   id: number;
   entryId: string;
   segment: 0 | 1;
-  path: DecorPath;
+  path: TrafficPath;
   progress: number;
   speed: number;
   method: HttpMethod;
@@ -81,7 +101,7 @@ export function buildStageLayout(pools: Record<string, BackendPool>): StageLayou
 function pathBetween(
   from: { x: number; y: number },
   to: { x: number; y: number },
-): DecorPath {
+): TrafficPath {
   return {
     points: [from, { x: (from.x + to.x) / 2, y: from.y - 10 }, to],
   };
@@ -296,6 +316,115 @@ export function drawTrafficStage(
     const point = getPointOnPath(animation.path, animation.progress);
     const kind = packetKind(animation.method);
     ctx.fillStyle = kind === "post" ? "#f59e0b" : "#2563eb";
+    ctx.fillRect(Math.round(point.x - 3), Math.round(point.y - 3), 6, 6);
+  }
+
+  ctx.restore();
+}
+
+export const MAX_INTRO_PACKETS = 12;
+
+export interface IntroBackendNode {
+  id: number;
+  x: number;
+  y: number;
+}
+
+export interface IntroPacket {
+  id: number;
+  pathIndex: number;
+  progress: number;
+  kind: "get" | "post";
+  speed: number;
+}
+
+export interface IntroTrafficState {
+  backends: IntroBackendNode[];
+  paths: TrafficPath[];
+  packets: IntroPacket[];
+  balancer: { x: number; y: number };
+}
+
+const INTRO_BACKEND_POSITIONS: Array<{ x: number; y: number }> = [
+  { x: 48, y: 36 },
+  { x: 272, y: 36 },
+  { x: 48, y: 144 },
+  { x: 272, y: 144 },
+  { x: 160, y: 152 },
+];
+
+export function createIntroTrafficState(): IntroTrafficState {
+  const balancer = { x: 160, y: 88 };
+  const backends = INTRO_BACKEND_POSITIONS.map((pos, id) => ({ id, ...pos }));
+  const paths = backends.map((backend) => ({
+    points: [balancer, { x: (balancer.x + backend.x) / 2, y: balancer.y - 12 }, backend],
+  }));
+
+  const packets: IntroPacket[] = [];
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    packets.push({
+      id: i,
+      pathIndex: i % paths.length,
+      progress: (i / count) % 1,
+      kind: i % 3 === 0 ? "post" : "get",
+      speed: 0.08 + (i % 4) * 0.015,
+    });
+  }
+
+  return { backends, paths, packets, balancer };
+}
+
+export function tickIntroTraffic(
+  state: IntroTrafficState,
+  options: StageTickOptions = {},
+): IntroTrafficState {
+  if (options.frozen || options.paused) {
+    return state;
+  }
+
+  const packets = state.packets.map((packet) => {
+    let progress = packet.progress + packet.speed * 0.12;
+    if (progress >= 1) {
+      progress = 0;
+    }
+    return { ...packet, progress };
+  });
+
+  return { ...state, packets };
+}
+
+export function drawIntroTraffic(
+  ctx: CanvasRenderingContext2D,
+  state: IntroTrafficState,
+  scale: number,
+): void {
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  for (const path of state.paths) {
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    path.points.forEach((point, i) => {
+      if (i === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+  }
+
+  drawServer(ctx, state.balancer.x, state.balancer.y, "#1d4ed8");
+  for (const backend of state.backends) {
+    drawServer(ctx, backend.x, backend.y, "#64748b");
+  }
+
+  for (const packet of state.packets) {
+    const path = state.paths[packet.pathIndex];
+    if (!path) continue;
+    const point = getPointOnPath(path, packet.progress);
+    ctx.fillStyle = packet.kind === "post" ? "#f59e0b" : "#2563eb";
     ctx.fillRect(Math.round(point.x - 3), Math.round(point.y - 3), 6, 6);
   }
 

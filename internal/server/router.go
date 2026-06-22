@@ -2,13 +2,12 @@ package server
 
 import (
 	"io/fs"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/fantastic-load-balancer/flb/internal/api"
 	"github.com/fantastic-load-balancer/flb/internal/store"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Dependencies wires API handlers to their repositories.
@@ -27,25 +26,33 @@ func NewHandler(deps Dependencies) (http.Handler, error) {
 	progressHandler := api.NewProgressHandler(deps.Progress)
 	leaderboardHandler := api.NewLeaderboardHandler(deps.Leaderboard)
 
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-
-	r.Get("/health", healthHandler)
-
-	r.Route("/api", func(r chi.Router) {
-		r.Get("/progress", progressHandler.Get)
-		r.Put("/progress", progressHandler.Put)
-		r.Get("/leaderboard", leaderboardHandler.Get)
-		r.Post("/leaderboard", leaderboardHandler.Post)
-	})
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", healthHandler)
+	mux.HandleFunc("GET /api/progress", progressHandler.Get)
+	mux.HandleFunc("PUT /api/progress", progressHandler.Put)
+	mux.HandleFunc("GET /api/leaderboard", leaderboardHandler.Get)
+	mux.HandleFunc("POST /api/leaderboard", leaderboardHandler.Post)
 
 	fileServer := http.FileServer(http.FS(static))
-	r.NotFound(spaHandler(static, fileServer))
+	return recoverMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		spaHandler(static, fileServer)(w, r)
+	})), nil
+}
 
-	return r, nil
+func recoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				log.Printf("panic: %v", recovered)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
