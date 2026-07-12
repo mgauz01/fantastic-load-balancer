@@ -111,6 +111,7 @@ make tunnel
 ```
 
 Vite proxies `/api` and `/health` to the Go server on `127.0.0.1:8080`.
+<!-- Consider extracting to function -->
 
 ## Commands
 
